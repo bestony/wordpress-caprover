@@ -6,6 +6,24 @@
 
 FROM php:8.5-apache
 
+# replace Debian mirrors to speed up apt operations in CN
+RUN set -eux; \
+	cat > /etc/apt/sources.list <<'EOF'
+# 默认注释了源码镜像以提高 apt update 速度，如有需要可自行取消注释
+deb http://mirrors.tencent.com/debian/ trixie main contrib non-free non-free-firmware
+#deb-src http://mirrors.tencent.com/debian/ trixie main contrib non-free non-free-firmware
+
+deb http://mirrors.tencent.com/debian/ trixie-updates main contrib non-free non-free-firmware
+#deb-src http://mirrors.tencent.com/debian/ trixie-updates main contrib non-free non-free-firmware
+
+deb http://mirrors.tencent.com/debian/ trixie-backports main contrib non-free non-free-firmware
+#deb-src http://mirrors.tencent.com/debian/ trixie-backports main contrib non-free non-free-firmware
+
+# 以下安全更新软件源包含了官方源与镜像站配置，如有需要可自行修改注释切换
+deb https://security.debian.org/debian-security trixie-security main contrib non-free non-free-firmware
+#deb-src https://security.debian.org/debian-security trixie-security main contrib non-free non-free-firmware
+EOF
+
 # persistent dependencies
 RUN set -eux; \
 	apt-get update; \
