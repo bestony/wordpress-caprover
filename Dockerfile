@@ -17,9 +17,7 @@ RUN set -eux; \
 
 # install the PHP extensions we need (https://make.wordpress.org/hosting/handbook/handbook/server-environment/#php-extensions)
 RUN set -ex; \
-	\
 	savedAptMark="$(apt-mark showmanual)"; \
-	\
 	apt-get update; \
 	apt-get install -y --no-install-recommends \
 		libavif-dev \
@@ -33,7 +31,6 @@ RUN set -ex; \
 		libwebp-dev \
 		libzip-dev \
 	; \
-	\
 	docker-php-ext-configure gd \
 		--with-avif \
 		--with-freetype \
@@ -47,10 +44,8 @@ RUN set -ex; \
 		intl \
 		mbstring \
 		mysqli \
-		opcache \
 		zip \
 	; \
-# https://pecl.php.net/package/imagick
 	pecl install imagick-3.8.1; \
 	docker-php-ext-enable imagick; \
 # https://pecl.php.net/package/redis
