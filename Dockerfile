@@ -44,6 +44,8 @@ RUN set -ex; \
 		libfreetype6-dev \
 		libicu-dev \
 		libjpeg-dev \
+		libonig-dev \
+		libxml2-dev \
 		libmagickwand-dev \
 		libpng-dev \
 		libwebp-dev \
@@ -61,12 +63,20 @@ RUN set -ex; \
 		exif \
 		gd \
 		intl \
+		mbstring \
 		mysqli \
+		opcache \
 		zip \
 	; \
 # https://pecl.php.net/package/imagick
 	pecl install imagick-3.8.1; \
 	docker-php-ext-enable imagick; \
+# https://pecl.php.net/package/redis
+	pecl install redis; \
+	docker-php-ext-enable redis; \
+# https://pecl.php.net/package/igbinary
+	pecl install igbinary; \
+	docker-php-ext-enable igbinary; \
 	rm -r /tmp/pear; \
 	\
 # some misbehaving extensions end up outputting to stdout 🙈 (https://github.com/docker-library/wordpress/issues/669#issuecomment-993945967)
