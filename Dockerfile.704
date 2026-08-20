@@ -1,0 +1,26 @@
+FROM wordpress:7.0.4
+
+# wordpress:7.0.4 (PHP 8.3) already ships imagick, exif, zip and OPcache;
+# only igbinary and yac are added here, then the requested opcache/yac
+# tuning is written to conf.d (zz-* sorts after the base's
+# opcache-recommended.ini, so our values win).
+RUN set -eux; \
+	pecl install igbinary yac; \
+	docker-php-ext-enable igbinary yac; \
+	rm -rf /tmp/pear; \
+	\
+	{ \
+		echo 'opcache.enable=1'; \
+		echo 'opcache.memory_consumption=256'; \
+		echo 'opcache.interned_strings_buffer=16'; \
+		echo 'opcache.max_accelerated_files=10000'; \
+		echo 'opcache.validate_timestamps=1'; \
+	} > /usr/local/etc/php/conf.d/zz-opcache.ini; \
+	{ \
+		echo 'yac.enable=1'; \
+		echo 'yac.keys_memory_size=4M'; \
+		echo 'yac.values_memory_size=64M'; \
+	} > /usr/local/etc/php/conf.d/zz-yac.ini; \
+	\
+	php -m | grep -E '^(yac|igbinary|imagick|exif|zip|Zend OPcache)$'; \
+	php -r 'foreach (["opcache.enable"=>"1","opcache.memory_consumption"=>"256","opcache.interned_strings_buffer"=>"16","opcache.max_accelerated_files"=>"10000","opcache.validate_timestamps"=>"1","yac.enable"=>"1","yac.keys_memory_size"=>"4M","yac.values_memory_size"=>"64M"] as $k=>$v) { if (ini_get($k) !== $v) { fwrite(STDERR, "$k=".ini_get($k)." expected $v\n"); exit(1); } }'

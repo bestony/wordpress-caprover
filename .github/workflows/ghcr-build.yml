@@ -76,3 +76,27 @@ jobs:
           platforms: linux/amd64
           cache-from: type=gha,scope=fpm
           cache-to: type=gha,mode=max,scope=fpm
+
+      - name: Extract Docker metadata (7.0.4)
+        id: meta-704
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/wordpress-caprover-704
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build and push (7.0.4)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.704
+          pull: true
+          push: true
+          tags: ${{ steps.meta-704.outputs.tags }}
+          labels: ${{ steps.meta-704.outputs.labels }}
+          platforms: linux/amd64
+          cache-from: type=gha,scope=704
+          cache-to: type=gha,mode=max,scope=704
