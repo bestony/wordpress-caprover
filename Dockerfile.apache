@@ -7,6 +7,7 @@ FROM wordpress:apache
 # configs, so our values win).
 RUN set -eux; \
 	pecl install igbinary; \
+	docker-php-ext-enable igbinary; \
 	pecl download yac; \
 	yacTar="$(find . -maxdepth 1 -name 'yac-*.tgz' -print -quit)"; \
 	[ -n "$yacTar" ]; \
@@ -15,7 +16,6 @@ RUN set -eux; \
 	rm "$yacTar"; \
 	docker-php-ext-configure yac --enable-igbinary; \
 	docker-php-ext-install -j "$(nproc)" yac; \
-	docker-php-ext-enable igbinary; \
 	rm -rf /tmp/pear /usr/src/php/ext/yac; \
 	\
 	{ \
