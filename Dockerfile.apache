@@ -23,10 +23,10 @@ RUN set -eux; \
 		echo 'opcache.memory_consumption=256'; \
 		echo 'opcache.interned_strings_buffer=32'; \
 		echo 'opcache.max_accelerated_files=20000'; \
-		echo 'opcache.validate_timestamps=0'; \
-		echo 'opcache.revalidate_freq=0'; \
+		echo 'opcache.validate_timestamps=1'; \
+		echo 'opcache.revalidate_freq=2'; \
 		echo 'opcache.save_comments=1'; \
-		echo 'opcache.enable_file_override=1'; \
+		echo 'opcache.enable_file_override=0'; \
 		echo 'opcache.jit=1255'; \
 		echo 'opcache.jit_buffer_size=128M'; \
 	} > /usr/local/etc/php/conf.d/zz-opcache.ini; \
@@ -41,13 +41,13 @@ RUN set -eux; \
 		echo 'memory_limit=256M'; \
 		echo 'max_execution_time=60'; \
 		echo 'upload_max_filesize=64M'; \
-		echo 'post_max_size=64M'; \
+		echo 'post_max_size=80M'; \
 		echo 'max_input_vars=3000'; \
 		echo 'realpath_cache_size=4096K'; \
 		echo 'realpath_cache_ttl=600'; \
 	} > /usr/local/etc/php/conf.d/zz-wordpress.ini; \
 	\
 	php -m | grep -E '^(yac|igbinary|imagick|exif|zip|Zend OPcache)$'; \
-	# max_execution_time is pinned to 0 by the CLI SAPI, so verify the config file instead of the runtime value (it applies under FPM)
+	# max_execution_time is pinned to 0 by the CLI SAPI, so verify the config file instead of the runtime value (it applies under Apache SAPI)
 	grep -q '^max_execution_time=60$' /usr/local/etc/php/conf.d/zz-wordpress.ini; \
-	php -r 'foreach (["opcache.enable"=>"1","opcache.memory_consumption"=>"256","opcache.interned_strings_buffer"=>"32","opcache.max_accelerated_files"=>"20000","opcache.validate_timestamps"=>"0","opcache.revalidate_freq"=>"0","opcache.save_comments"=>"1","opcache.enable_file_override"=>"1","opcache.jit"=>"1255","opcache.jit_buffer_size"=>"128M","yac.enable"=>"1","yac.keys_memory_size"=>"16M","yac.values_memory_size"=>"128M","yac.serializer"=>"igbinary","memory_limit"=>"256M","upload_max_filesize"=>"64M","post_max_size"=>"64M","max_input_vars"=>"3000","realpath_cache_size"=>"4096K","realpath_cache_ttl"=>"600"] as $k=>$v) { if (ini_get($k) !== $v) { fwrite(STDERR, "$k=".ini_get($k)." expected $v\n"); exit(1); } }'
+	php -r 'foreach (["opcache.enable"=>"1","opcache.memory_consumption"=>"256","opcache.interned_strings_buffer"=>"32","opcache.max_accelerated_files"=>"20000","opcache.validate_timestamps"=>"1","opcache.revalidate_freq"=>"2","opcache.save_comments"=>"1","opcache.enable_file_override"=>"0","opcache.jit"=>"1255","opcache.jit_buffer_size"=>"128M","yac.enable"=>"1","yac.keys_memory_size"=>"16M","yac.values_memory_size"=>"128M","yac.serializer"=>"igbinary","memory_limit"=>"256M","upload_max_filesize"=>"64M","post_max_size"=>"80M","max_input_vars"=>"3000","realpath_cache_size"=>"4096K","realpath_cache_ttl"=>"600"] as $k=>$v) { if (ini_get($k) !== $v) { fwrite(STDERR, "$k=".ini_get($k)." expected $v\n"); exit(1); } }'
