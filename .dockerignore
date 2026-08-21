@@ -1,6 +1,7 @@
 .git
 .gitlock
 .github
+.pi/
 
 .DS_Store
 Thumbs.db

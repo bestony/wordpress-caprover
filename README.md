@@ -1,6 +1,6 @@
 # WordPress for CapRover
 
-Docker images for running WordPress on [CapRover](https://caprover.com), automatically built and pushed to GHCR on every push to `main`/`master`, version tags (`v*`, `release-*`, `*.*.*`), and manual dispatch.
+Docker images for running WordPress on [CapRover](https://caprover.com). GitHub Actions builds and pushes each image to GHCR on every push to `main`/`master`, on version tags (`v*`, `release-*`, `*.*.*`), and on manual dispatch.
 
 ## Available Images
 
@@ -10,7 +10,7 @@ All images live under `ghcr.io/<your-ghcr-owner>/`. Replace `<owner>` below with
 |-------|------------|------|---------------|-------------|
 | [`wordpress-caprover-apache`](#wordpress-caprover-apache) | `Dockerfile` | `wordpress:7.0-php8.4-apache` | memcached + redis (igbinary/msgpack) cache backends | **Default / recommended.** Classic Apache + mod_php stack, what the CapRover one-click deploy uses. |
 | [`wordpress-caprover-fpm`](#wordpress-caprover-fpm) | `Dockerfile.fpm` | `wordpress:php8.5-fpm` | yac, igbinary, imagick, exif, zip | PHP-FPM runtime. Pair with a separate web server (e.g. an nginx app on CapRover) that proxies FastCGI to it. |
-| [`wordpress-caprover-7.0.4`](#wordpress-caprover-704) | `Dockerfile.apache` | `wordpress:apache` (PHP 8.3) | igbinary, yac, tuned opcache/yac config | Apache variant tuned for caching: OPcache + YAC memory tuning for high-traffic sites. |
+| [`wordpress-caprover-apache-yac`](#wordpress-caprover-apache-yac) | `Dockerfile.apache` | `wordpress:apache` (PHP 8.3) | igbinary, yac, tuned opcache/yac config | Apache variant tuned for caching: OPcache + YAC memory tuning for high-traffic sites. |
 
 ## Image Semantics
 
@@ -30,12 +30,12 @@ A PHP-FPM variant, built from `Dockerfile.fpm`, for setups that separate the web
 docker pull ghcr.io/<owner>/wordpress-caprover-fpm:latest
 ```
 
-### `wordpress-caprover-7.0.4`
+### `wordpress-caprover-apache-yac`
 
-Apache variant built from `Dockerfile.apache` on the rolling `wordpress:apache` tag (PHP 8.3). The GHCR image name is historical (the Dockerfile was previously `Dockerfile.704`). It keeps the upstream imagick/exif/zip/OPcache extensions, adds igbinary and yac, and writes tuned `opcache` (256M memory, 20k accelerated files) and `yac` (16M keys / 128M values) settings that override the base image defaults. Choose this when you want the Apache stack with the strongest in-process caching (`yac` + OPcache) and don't need the memcached/redis backends of `wordpress-caprover-apache`.
+Apache variant built from `Dockerfile.apache` on the rolling `wordpress:apache` tag (PHP 8.3). It keeps the upstream imagick/exif/zip/OPcache extensions, adds igbinary and yac, and writes tuned `opcache` (256M memory, 20k accelerated files) and `yac` (16M keys / 128M values) settings that override the base image defaults. Choose this when you want the Apache stack with the strongest in-process caching (`yac` + OPcache) and don't need the memcached/redis backends of `wordpress-caprover-apache`.
 
 ```bash
-docker pull ghcr.io/<owner>/wordpress-caprover-7.0.4:latest
+docker pull ghcr.io/<owner>/wordpress-caprover-apache-yac:latest
 ```
 
 ## Tags
@@ -46,6 +46,8 @@ Each image is published with the same tag scheme from `docker/metadata-action`:
 - `<branch>` — e.g. `main`
 - `<tag>` — for semver tags like `v1.2.3` / `1.2.3` / `release-1.2.3`
 - `<sha>` — short commit SHA for exact-pin rollback
+
+CI also pushes a `buildcache` tag for each image. That tag is a BuildKit cache index for GitHub Actions. Do not run it.
 
 ## Usage on CapRover
 

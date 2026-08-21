@@ -1,4 +1,4 @@
-name: Build and Push Docker Image
+name: Publish WordPress CapRover images
 
 on:
   push:
@@ -6,13 +6,34 @@ on:
     tags: ["v*", "release-*", "*.*.*"]
   workflow_dispatch:
 
+concurrency:
+  group: ghcr-publish-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   packages: write
 
 jobs:
-  build-and-push:
+  publish:
+    name: ${{ matrix.image }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: wordpress-caprover-apache
+            file: Dockerfile
+            cache_scope: apache
+            description: Apache + mod_php with memcached and redis cache backends
+          - image: wordpress-caprover-fpm
+            file: Dockerfile.fpm
+            cache_scope: fpm
+            description: PHP-FPM with yac, igbinary, and imagick
+          - image: wordpress-caprover-apache-yac
+            file: Dockerfile.apache
+            cache_scope: apache-yac
+            description: Apache with YAC and tuned OPcache
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,74 +48,35 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract Docker metadata (apache)
-        id: meta-apache
+      - name: Extract Docker metadata
+        id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/${{ github.repository_owner }}/wordpress-caprover-apache
+          images: ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}
+          labels: |
+            org.opencontainers.image.title=${{ matrix.image }}
+            org.opencontainers.image.description=${{ matrix.description }}
           tags: |
             type=ref,event=branch
             type=ref,event=tag
             type=sha
             type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Build and push (apache)
+      - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: Dockerfile
+          file: ${{ matrix.file }}
           pull: true
           push: true
-          tags: ${{ steps.meta-apache.outputs.tags }}
-          labels: ${{ steps.meta-apache.outputs.labels }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          annotations: ${{ steps.meta.outputs.annotations }}
           platforms: linux/amd64
-          cache-from: type=gha,scope=apache
-          cache-to: type=gha,mode=max,scope=apache
-
-      - name: Extract Docker metadata (fpm)
-        id: meta-fpm
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository_owner }}/wordpress-caprover-fpm
-          tags: |
-            type=ref,event=branch
-            type=ref,event=tag
-            type=sha
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Build and push (fpm)
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: Dockerfile.fpm
-          pull: true
-          push: true
-          tags: ${{ steps.meta-fpm.outputs.tags }}
-          labels: ${{ steps.meta-fpm.outputs.labels }}
-          platforms: linux/amd64
-          cache-from: type=gha,scope=fpm
-          cache-to: type=gha,mode=max,scope=fpm
-
-      - name: Extract Docker metadata (apache-tuned)
-        id: meta-apache-tuned
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository_owner }}/wordpress-caprover-7.0.4
-          tags: |
-            type=ref,event=branch
-            type=ref,event=tag
-            type=sha
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Build and push (apache-tuned)
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: Dockerfile.apache
-          pull: true
-          push: true
-          tags: ${{ steps.meta-apache-tuned.outputs.tags }}
-          labels: ${{ steps.meta-apache-tuned.outputs.labels }}
-          platforms: linux/amd64
-          cache-from: type=gha,scope=7.0.4
-          cache-to: type=gha,mode=max,scope=7.0.4
+          cache-from: |
+            type=gha,scope=${{ matrix.cache_scope }}
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:buildcache
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:latest
+          cache-to: |
+            type=gha,mode=max,scope=${{ matrix.cache_scope }}
+            type=registry,ref=ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:buildcache,mode=max,image-manifest=true,oci-mediatypes=true,compression=zstd,ignore-error=true

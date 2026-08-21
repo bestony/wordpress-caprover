@@ -1,8 +1,20 @@
+# syntax=docker/dockerfile:1
 FROM wordpress:7.0-php8.4-apache
 
 # Keep CapRover-specific cache backends available without re-maintaining the
 # upstream WordPress image bootstrap, entrypoint, Apache, and PHP defaults.
-RUN set -eux; \
+# apt/pecl downloads stay on BuildKit cache mounts so a base-image bump does
+# not re-fetch packages. docker-clean is disabled only for this RUN, then
+# restored, so the final image still wipes apt caches in later layers.
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+	--mount=type=cache,target=/var/lib/apt,sharing=locked \
+	--mount=type=cache,target=/tmp/pear,sharing=locked \
+	set -eux; \
+	dockerClean=; \
+	if [ -f /etc/apt/apt.conf.d/docker-clean ]; then \
+		dockerClean="$(cat /etc/apt/apt.conf.d/docker-clean)"; \
+		rm -f /etc/apt/apt.conf.d/docker-clean; \
+	fi; \
 	savedAptMark="$(apt-mark showmanual)"; \
 	apt-get update; \
 	apt-get install -y --no-install-recommends \
@@ -23,7 +35,7 @@ RUN set -eux; \
 		--disable-memcached-sasl \
 	; \
 	docker-php-ext-install -j "$(nproc)" memcached; \
-	rm -rf /tmp/pear /usr/src/php/ext/memcached; \
+	rm -rf /usr/src/php/ext/memcached; \
 	\
 # Some misbehaving extensions end up outputting to stdout
 # (https://github.com/docker-library/wordpress/issues/669#issuecomment-993945967).
@@ -45,7 +57,9 @@ RUN set -eux; \
 		| xargs -rt apt-mark manual; \
 	\
 	apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false; \
-	rm -rf /var/lib/apt/lists/*; \
+	if [ -n "$dockerClean" ]; then \
+		printf '%s\n' "$dockerClean" > /etc/apt/apt.conf.d/docker-clean; \
+	fi; \
 	\
 	! { ldd "$extDir"/*.so | grep 'not found'; }; \
 	err="$(php --version 3>&1 1>&2 2>&3)"; \
