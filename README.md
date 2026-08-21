@@ -10,7 +10,7 @@ All images live under `ghcr.io/<your-ghcr-owner>/`. Replace `<owner>` below with
 |-------|------|---------------|-------------|
 | [`wordpress-caprover-apache`](#wordpress-caprover-apache) | `wordpress:7.0-php8.4-apache` | memcached + redis (igbinary/msgpack) cache backends | **Default / recommended.** Classic Apache + mod_php stack, what the CapRover one-click deploy uses. |
 | [`wordpress-caprover-fpm`](#wordpress-caprover-fpm) | `wordpress:php8.5-fpm` | yac, igbinary, imagick, exif, zip | PHP-FPM runtime. Pair with a separate web server (e.g. an nginx app on CapRover) that proxies FastCGI to it. |
-| [`wordpress-caprover-7.0.4`](#wordpress-caprover-704) | `wordpress:7.0.4` (PHP 8.3) | igbinary, yac, tuned opcache/yac config | Pin a specific WordPress version. Adds OPcache + YAC memory tuning for high-traffic sites on a fixed release. |
+| [`wordpress-caprover-7.0.4`](#wordpress-caprover-704) | `wordpress:apache` (PHP 8.3) | igbinary, yac, tuned opcache/yac config | Apache variant tuned for caching: OPcache + YAC memory tuning for high-traffic sites. |
 
 ## Image Semantics
 
@@ -32,7 +32,7 @@ docker pull ghcr.io/<owner>/wordpress-caprover-fpm:latest
 
 ### `wordpress-caprover-7.0.4`
 
-Pinned to WordPress `7.0.4` (PHP 8.3) instead of tracking the rolling `7.0` tag, for deployments that need a reproducible version. Adds igbinary and yac, and writes tuned `opcache` (256M memory, 10k accelerated files) and `yac` (64M values) settings that override the base image defaults. Recommended when you want the latest 7.0.x features without drift.
+Apache variant built from the rolling `wordpress:apache` tag (PHP 8.3). It keeps the upstream imagick/exif/zip/OPcache extensions, adds igbinary and yac, and writes tuned `opcache` (256M memory, 10k accelerated files) and `yac` (16M keys / 128M values) settings that override the base image defaults. Choose this when you want the Apache stack with the strongest in-process caching (`yac` + OPcache) and don't need the memcached/redis backends of `wordpress-caprover-apache`.
 
 ```bash
 docker pull ghcr.io/<owner>/wordpress-caprover-7.0.4:latest
