@@ -49,8 +49,93 @@ Each image is published with the same tag scheme from `docker/metadata-action`:
 
 CI also pushes a `buildcache` tag for each image. That tag is a BuildKit cache index for GitHub Actions. Do not run it.
 
+## Environment Variables
+
+All images inherit the configuration from the upstream `wordpress` image, so `wp-config.php` is generated from environment variables on first boot. The common ones:
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `WORDPRESS_DB_HOST` | `mysql` | Database host (`host` or `host:port`). |
+| `WORDPRESS_DB_USER` | `root` | Database user. |
+| `WORDPRESS_DB_PASSWORD` | _(empty)_ | Database password. |
+| `WORDPRESS_DB_NAME` | `wordpress` | Database name. |
+| `WORDPRESS_TABLE_PREFIX` | `wp_` | Table prefix (needed to share one DB across sites). |
+| `WORDPRESS_AUTH_KEY`, `WORDPRESS_SECRET_KEY`, `WORDPRESS_LOGGED_IN_KEY`, `WORDPRESS_NONCE_KEY`, `WORDPRESS_AUTH_SALT`, `WORDPRESS_SECURE_AUTH_SALT`, `WORDPRESS_LOGGED_IN_SALT`, `WORDPRESS_NONCE_SALT` | random | Auth keys/salts. Set them explicitly in production so sessions survive redeploys. |
+| `WORDPRESS_DEBUG` | _(unset)_ | Any non-empty value turns on `WP_DEBUG`. |
+| `WORDPRESS_CONFIG_EXTRA` | _(unset)_ | Raw PHP appended to `wp-config.php`, e.g. to `define()` extra constants. |
+
+Notes:
+
+- Any `WORDPRESS_*` variable also accepts a `_FILE` suffix (e.g. `WORDPRESS_DB_PASSWORD_FILE=/run/secrets/db_password`) to read the value from a file — use this for Docker/CapRover secrets instead of putting passwords in plaintext.
+- To enable an object cache backend (redis/memcached extensions ship in `wordpress-caprover-apache`), inject the config via `WORDPRESS_CONFIG_EXTRA` and a drop-in plugin, e.g.:
+
+  ```bash
+  -e WORDPRESS_CONFIG_EXTRA="define('WP_REDIS_HOST', 'srv-captain--redis'); define('WP_REDIS_PORT', 6379);"
+  ```
+
+- On CapRover, set these under the app's **App Configs → Environment Variables**.
+
+## File Mounts (Volumes)
+
+The images use the upstream `WORKDIR`/`VOLUME` of `/var/www/html`. Mount that path for persistence, or bind-mount subpaths to inject your own plugins and themes.
+
+| Container path | What to mount there |
+|----------------|---------------------|
+| `/var/www/html` | The whole WordPress install — mount a persistent volume so uploads, updates, and installed plugins/themes survive redeploys. |
+| `/var/www/html/wp-content/plugins/<plugin>` | A single plugin directory. |
+| `/var/www/html/wp-content/themes/<theme>` | A single theme directory. |
+
+### Mount a plugin and a theme
+
+Bind-mount your local plugin/theme directories straight into `wp-content`. Add `:ro` (read-only) for code you don't want WordPress to auto-update or modify:
+
+```bash
+docker run -d --name wordpress \
+  -p 8080:80 \
+  -e WORDPRESS_DB_HOST=db \
+  -e WORDPRESS_DB_USER=wordpress \
+  -e WORDPRESS_DB_PASSWORD=wordpress \
+  -e WORDPRESS_DB_NAME=wordpress \
+  -v wp_data:/var/www/html \
+  -v ./my-plugin:/var/www/html/wp-content/plugins/my-plugin:ro \
+  -v ./my-theme:/var/www/html/wp-content/themes/my-theme:ro \
+  ghcr.io/<owner>/wordpress-caprover-apache:latest
+```
+
+The same with Compose:
+
+```yaml
+services:
+  wordpress:
+    image: ghcr.io/<owner>/wordpress-caprover-apache:latest
+    ports:
+      - "8080:80"
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress
+      WORDPRESS_DB_NAME: wordpress
+    volumes:
+      - wp_data:/var/www/html
+      - ./my-plugin:/var/www/html/wp-content/plugins/my-plugin:ro
+      - ./my-theme:/var/www/html/wp-content/themes/my-theme:ro
+volumes:
+  wp_data:
+```
+
+The directory name after `plugins/` or `themes/` is what WordPress lists — mount to a path whose last segment matches the plugin/theme slug (its main folder name). After the container is up, activate them from **wp-admin → Plugins / Appearance**.
+
+> Bake-in vs mount: for image builds you own, `COPY my-plugin /var/www/html/wp-content/plugins/my-plugin` in a Dockerfile ships the plugin inside the image (immutable, no host dependency). Bind-mounting is for local development or host-managed code you edit without rebuilding.
+
 ## Usage on CapRover
 
 1. In CapRover, create an app and set the image to one of the GHCR images above (e.g. `ghcr.io/<owner>/wordpress-caprover-apache:latest`).
 2. Set the app's HTTP port to `80` for the apache image, or proxy PHP-FPM separately for the `-fpm` image.
 3. Mount a persistent volume for `/var/www/html` so `wp-content` uploads survive redeploys.
+4. Set database and secret variables under **App Configs → Environment Variables** (see [Environment Variables](#environment-variables)).
+5. To ship a custom plugin/theme on CapRover via **Persistent Directories** (App Configs → Persistent Directories):
+   - Add one directory per plugin/theme. Set **Path in App** to the container path, e.g. `/var/www/html/wp-content/plugins/my-plugin` or `/var/www/html/wp-content/themes/my-theme`.
+   - Choose **Set a specific path** and give a host path on the CapRover server, e.g. `/captain/data/wp/my-plugin`.
+   - A persistent directory starts **empty** — the plugin/theme only shows up after you put its files at that host path. SSH into the CapRover server and `git clone` / `scp` / `rsync` your code into it (the last path segment must match the plugin/theme slug).
+   - Save & Update, then activate from **wp-admin → Plugins / Appearance**.
+   - This also survives redeploys, so you can edit the code on the host without rebuilding the image.
