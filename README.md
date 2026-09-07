@@ -32,7 +32,7 @@ docker pull ghcr.io/bestony/wordpress-caprover-fpm:latest
 
 ### `wordpress-caprover-apache-yac`
 
-Apache variant built from `Dockerfile.apache` on the rolling `wordpress:apache` tag (PHP 8.3). It keeps the upstream imagick/exif/zip/OPcache extensions, adds igbinary and yac, and writes tuned `opcache` (256M memory, 20k accelerated files) and `yac` (16M keys / 128M values) settings that override the base image defaults. Choose this when you want the Apache stack with the strongest in-process caching (`yac` + OPcache) and don't need the memcached/redis backends of `wordpress-caprover-apache`.
+Apache variant built from `Dockerfile.apache` on the rolling `wordpress:apache` tag (PHP 8.3). It keeps the upstream imagick/exif/zip/OPcache extensions, adds igbinary and yac, and writes tuned `opcache` (256M memory, 20k accelerated files) and `yac` (4M keys / 64M values) settings that override the base image defaults. Choose this when you want the Apache stack with the strongest in-process caching (`yac` + OPcache) and don't need the memcached/redis backends of `wordpress-caprover-apache`.
 
 ```bash
 docker pull ghcr.io/bestony/wordpress-caprover-apache-yac:latest
