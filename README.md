@@ -8,7 +8,7 @@ All images live under `ghcr.io/bestony/`.
 
 | Image | Dockerfile | Base | Key Additions | When to Use |
 |-------|------------|------|---------------|-------------|
-| [`wordpress-caprover-apache`](#wordpress-caprover-apache) | `Dockerfile` | `wordpress:7.0-php8.5-apache` | memcached + redis (igbinary/msgpack) cache backends | **Default / recommended.** Classic Apache + mod_php stack, what the CapRover one-click deploy uses. |
+| [`wordpress-caprover-apache`](#wordpress-caprover-apache) | `Dockerfile` | `wordpress:php8.5-apache` | memcached + redis (igbinary/msgpack) cache backends | **Default / recommended.** Classic Apache + mod_php stack, what the CapRover one-click deploy uses. |
 | [`wordpress-caprover-fpm`](#wordpress-caprover-fpm) | `Dockerfile.fpm` | `wordpress:php8.5-fpm` | yac, igbinary, imagick, exif, zip | PHP-FPM runtime. Pair with a separate web server (e.g. an nginx app on CapRover) that proxies FastCGI to it. |
 | [`wordpress-caprover-apache-yac`](#wordpress-caprover-apache-yac) | `Dockerfile.apache` | `wordpress:php8.5-apache` (PHP 8.5) | igbinary, yac, tuned opcache/yac config | Apache variant tuned for caching: OPcache + YAC memory tuning for high-traffic sites. |
 
