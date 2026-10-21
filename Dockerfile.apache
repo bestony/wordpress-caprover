@@ -1,9 +1,8 @@
 # syntax=docker/dockerfile:1
-FROM wordpress:apache
+FROM wordpress:php8.5-apache
 
-# wordpress:apache (rolling tag, PHP 8.3) already ships imagick, exif, zip
-# and OPcache; yac is compiled with --enable-igbinary so it can use the
-# igbinary serializer (smaller cached values, less shared-memory use).
+# wordpress:php8.5-apache (rolling tag, PHP 8.5) already ships imagick, exif, zip
+# and OPcache; igbinary is installed alongside yac for object-cache plugins
 # PHP ini overrides live in conf/apache-yac/ and COPY after this layer so
 # config-only changes do not recompile extensions.
 RUN --mount=type=cache,target=/tmp/pear,sharing=locked \
@@ -16,7 +15,7 @@ RUN --mount=type=cache,target=/tmp/pear,sharing=locked \
 	mkdir -p /usr/src/php/ext/yac; \
 	tar --extract --file "$yacTar" --strip-components=1 --directory /usr/src/php/ext/yac; \
 	rm "$yacTar"; \
-	docker-php-ext-configure yac --enable-igbinary; \
+	docker-php-ext-configure yac; \
 	docker-php-ext-install -j "$(nproc)" yac; \
 	rm -rf /usr/src/php/ext/yac
 
@@ -26,4 +25,4 @@ RUN set -eux; \
 	php -m | grep -E '^(yac|igbinary|imagick|exif|zip|Zend OPcache)$'; \
 	# max_execution_time is pinned to 0 by the CLI SAPI, so verify the config file instead of the runtime value (it applies under Apache SAPI)
 	grep -q '^max_execution_time=60$' /usr/local/etc/php/conf.d/zz-wordpress.ini; \
-	php -r 'foreach (["opcache.enable"=>"1","opcache.memory_consumption"=>"256","opcache.interned_strings_buffer"=>"32","opcache.max_accelerated_files"=>"20000","opcache.validate_timestamps"=>"1","opcache.revalidate_freq"=>"2","opcache.save_comments"=>"1","opcache.enable_file_override"=>"0","opcache.jit"=>"1255","opcache.jit_buffer_size"=>"128M","yac.enable"=>"1","yac.keys_memory_size"=>"4M","yac.values_memory_size"=>"64M","yac.serializer"=>"igbinary","memory_limit"=>"256M","upload_max_filesize"=>"64M","post_max_size"=>"80M","max_input_vars"=>"3000","realpath_cache_size"=>"4096K","realpath_cache_ttl"=>"600"] as $k=>$v) { if (ini_get($k) !== $v) { fwrite(STDERR, "$k=".ini_get($k)." expected $v\n"); exit(1); } }'
+	php -r 'foreach (["opcache.enable"=>"1","opcache.memory_consumption"=>"256","opcache.interned_strings_buffer"=>"32","opcache.max_accelerated_files"=>"20000","opcache.validate_timestamps"=>"1","opcache.revalidate_freq"=>"2","opcache.save_comments"=>"1","opcache.enable_file_override"=>"0","opcache.jit"=>"1255","opcache.jit_buffer_size"=>"128M","yac.enable"=>"1","yac.keys_memory_size"=>"4M","yac.values_memory_size"=>"64M","memory_limit"=>"256M","upload_max_filesize"=>"64M","post_max_size"=>"80M","max_input_vars"=>"3000","realpath_cache_size"=>"4096K","realpath_cache_ttl"=>"600"] as $k=>$v) { if (ini_get($k) !== $v) { fwrite(STDERR, "$k=".ini_get($k)." expected $v\n"); exit(1); } }'

@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM wordpress:7.0-php8.4-apache
+FROM wordpress:7.0-php8.5-apache
 
 # Keep CapRover-specific cache backends available without re-maintaining the
 # upstream WordPress image bootstrap, entrypoint, Apache, and PHP defaults.
